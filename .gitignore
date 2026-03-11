@@ -1,0 +1,7 @@
+bimsa_runs/
+*.xlsx
+.idea/
+.DS_Store
+dist/
+build/
+__pycache__/
