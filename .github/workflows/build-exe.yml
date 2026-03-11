@@ -28,11 +28,7 @@ jobs:
         pip install pyinstaller
 
     - name: Compilar EXE
-      run: |
-        pyinstaller Bimsa_Cli.py ^
-        --onefile ^
-        --name BimsaETLV2 ^
-        --add-data "templates;templates"
+      run: pyinstaller Bimsa_Cli.py --onefile --name BimsaETLV2 --add-data "templates;templates"
 
     - name: Subir ejecutable
       uses: actions/upload-artifact@v4
