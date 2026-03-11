@@ -1,0 +1,222 @@
+<WS_CL_OBRAS>
+<datos>
+<Clave_Proyecto>OC100001</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-02</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Edificio residencial en Guadalajara</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Jalisco</Region>
+<Estado_Proyecto>Jalisco</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Zapopan</Del_Cd_Mun_Proyecto>
+<Localizacion1>Av. Vallarta 3200</Localizacion1>
+<Inversion>35000000</Inversion>
+<Genero>Vivienda</Genero>
+<Subgenero>Residencial</Subgenero>
+<Tipo_Obra>Condominios</Tipo_Obra>
+<Compania>Constructora Delta</Compania>
+<Nombre_1>Carlos</Nombre_1>
+<Paterno_1>Ramirez</Paterno_1>
+<Materno_1>Lopez</Materno_1>
+<Puesto_1>Director de Obra</Puesto_1>
+<Email_1>carlos@delta.com</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100002</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-03</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Centro comercial zona norte</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Nuevo León</Region>
+<Estado_Proyecto>Nuevo León</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Monterrey</Del_Cd_Mun_Proyecto>
+<Localizacion1>Av. Gonzalitos</Localizacion1>
+<Inversion>89000000</Inversion>
+<Genero>Comercial</Genero>
+<Subgenero>Plaza</Subgenero>
+<Tipo_Obra>Centro comercial</Tipo_Obra>
+<Compania>Grupo Norte</Compania>
+<Nombre_1>Lucia</Nombre_1>
+<Paterno_1>Torres</Paterno_1>
+<Materno_1>Gomez</Materno_1>
+<Puesto_1>Gerente</Puesto_1>
+<Email_1>lucia@norte.mx</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100003</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-04</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Hospital privado</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Ciudad de México</Region>
+<Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Miguel Hidalgo</Del_Cd_Mun_Proyecto>
+<Localizacion1>Polanco</Localizacion1>
+<Inversion>120000000</Inversion>
+<Genero>Salud</Genero>
+<Subgenero>Hospital</Subgenero>
+<Tipo_Obra>Hospital</Tipo_Obra>
+<Compania>Salud Integral</Compania>
+<Nombre_1>Pedro</Nombre_1>
+<Paterno_1>Santos</Paterno_1>
+<Materno_1>Diaz</Materno_1>
+<Puesto_1>Arquitecto</Puesto_1>
+<Email_1>pedro@salud.com</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100004</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-05</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Parque industrial</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Querétaro</Region>
+<Estado_Proyecto>Querétaro</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>El Marqués</Del_Cd_Mun_Proyecto>
+<Localizacion1>Zona industrial</Localizacion1>
+<Inversion>64000000</Inversion>
+<Genero>Industrial</Genero>
+<Subgenero>Naves</Subgenero>
+<Tipo_Obra>Industrial</Tipo_Obra>
+<Compania>Infraestructura Bajio</Compania>
+<Nombre_1>Mario</Nombre_1>
+<Paterno_1>Lopez</Paterno_1>
+<Materno_1>Garcia</Materno_1>
+<Puesto_1>Ingeniero</Puesto_1>
+<Email_1>mario@bajio.com</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100005</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-06</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Hotel boutique</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Remodelacion</Tipo_Desarrollo>
+<Region>Quintana Roo</Region>
+<Estado_Proyecto>Quintana Roo</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Cancún</Del_Cd_Mun_Proyecto>
+<Localizacion1>Zona hotelera</Localizacion1>
+<Inversion>21000000</Inversion>
+<Genero>Turismo</Genero>
+<Subgenero>Hotel</Subgenero>
+<Tipo_Obra>Hotel</Tipo_Obra>
+<Compania>Hoteles Caribe</Compania>
+<Nombre_1>Sofia</Nombre_1>
+<Paterno_1>Hernandez</Paterno_1>
+<Materno_1>Vega</Materno_1>
+<Puesto_1>Gerente de proyecto</Puesto_1>
+<Email_1>sofia@caribe.com</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100006</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-07</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Conjunto habitacional</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Puebla</Region>
+<Estado_Proyecto>Puebla</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Puebla</Del_Cd_Mun_Proyecto>
+<Localizacion1>Angelopolis</Localizacion1>
+<Inversion>50000000</Inversion>
+<Genero>Vivienda</Genero>
+<Subgenero>Residencial</Subgenero>
+<Tipo_Obra>Habitacional</Tipo_Obra>
+<Compania>Urbanizadora Centro</Compania>
+<Nombre_1>Ricardo</Nombre_1>
+<Paterno_1>Campos</Paterno_1>
+<Materno_1>Luna</Materno_1>
+<Puesto_1>Coordinador</Puesto_1>
+<Email_1>ricardo@urban.mx</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100007</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-08</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Terminal de autobuses</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Veracruz</Region>
+<Estado_Proyecto>Veracruz</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Veracruz</Del_Cd_Mun_Proyecto>
+<Localizacion1>Centro</Localizacion1>
+<Inversion>42000000</Inversion>
+<Genero>Infraestructura</Genero>
+<Subgenero>Transporte</Subgenero>
+<Tipo_Obra>Terminal</Tipo_Obra>
+<Compania>Movilidad SA</Compania>
+<Nombre_1>Andrea</Nombre_1>
+<Paterno_1>Martinez</Paterno_1>
+<Materno_1>Cruz</Materno_1>
+<Puesto_1>Ingeniera</Puesto_1>
+<Email_1>andrea@movilidad.mx</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100008</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-09</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Escuela primaria</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Hidalgo</Region>
+<Estado_Proyecto>Hidalgo</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Pachuca</Del_Cd_Mun_Proyecto>
+<Localizacion1>Zona centro</Localizacion1>
+<Inversion>12000000</Inversion>
+<Genero>Educacion</Genero>
+<Subgenero>Escuela</Subgenero>
+<Tipo_Obra>Educativa</Tipo_Obra>
+<Compania>Infraestructura Educativa</Compania>
+<Nombre_1>Daniel</Nombre_1>
+<Paterno_1>Reyes</Paterno_1>
+<Materno_1>Lozano</Materno_1>
+<Puesto_1>Arquitecto</Puesto_1>
+<Email_1>daniel@edu.mx</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100009</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-10</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Planta de manufactura</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Coahuila</Region>
+<Estado_Proyecto>Coahuila</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Saltillo</Del_Cd_Mun_Proyecto>
+<Localizacion1>Parque industrial</Localizacion1>
+<Inversion>150000000</Inversion>
+<Genero>Industrial</Genero>
+<Subgenero>Manufactura</Subgenero>
+<Tipo_Obra>Industrial</Tipo_Obra>
+<Compania>Manufacturas Norte</Compania>
+<Nombre_1>Alberto</Nombre_1>
+<Paterno_1>Silva</Paterno_1>
+<Materno_1>Ortega</Materno_1>
+<Puesto_1>Director</Puesto_1>
+<Email_1>alberto@norte.mx</Email_1>
+</datos>
+<datos>
+<Clave_Proyecto>OC100010</Clave_Proyecto>
+<Fecha_Publicacion>2026-01-11</Fecha_Publicacion>
+<Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+<Proyecto>Centro logistico</Proyecto>
+<Etapa>Obra Negociada</Etapa>
+<Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+<Region>Estado de México</Region>
+<Estado_Proyecto>Estado de México</Estado_Proyecto>
+<Del_Cd_Mun_Proyecto>Toluca</Del_Cd_Mun_Proyecto>
+<Localizacion1>Zona industrial Toluca</Localizacion1>
+<Inversion>73000000</Inversion>
+<Genero>Industrial</Genero>
+<Subgenero>Logistica</Subgenero>
+<Tipo_Obra>Centro logistico</Tipo_Obra>
+<Compania>Logistica Central</Compania>
+<Nombre_1>Fernanda</Nombre_1>
+<Paterno_1>Morales</Paterno_1>
+<Materno_1>Ruiz</Materno_1>
+<Puesto_1>Coordinadora</Puesto_1>
+<Email_1>fernanda@logistica.mx</Email_1>
+</datos>
+</WS_CL_OBRAS>
