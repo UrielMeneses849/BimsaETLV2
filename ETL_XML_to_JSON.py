@@ -6,58 +6,12 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Union, Any, Dict, List
 
-_AMP_NEEDS_ESCAPE = re.compile(r"&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9A-Fa-f]+);)")
-
-
-def _escape_bare_ampersands(xml: str) -> str:
-    return _AMP_NEEDS_ESCAPE.sub("&amp;", xml)
-
-
-def _accent_score(s: str) -> int:
-    good = "áéíóúÁÉÍÓÚñÑüÜ"
-    return sum(ch in s for ch in good)
-
-
-def _looks_mojibake(s: str) -> bool:
-    return any(h in s for h in ("Ã", "Â", "µ", "¥", "�", "à", "¨", "¢", "¤"))
-
-
-# def _repair_mojibake(s: str) -> str:
-#    if not isinstance(s, str) or not s:
-#        return s
-
-    # UTF-8 leído como latin1/cp1252: MÃ©xico
-    if ("Ã" in s) or ("Â" in s):
-        for enc in ("latin1", "cp1252"):
-            try:
-                cand = s.encode(enc).decode("utf-8")
-                if cand and cand != s:
-                    s = cand
-                    break
-            except Exception:
-                pass
-
-    # CP850/CP437 vs CP1252: Ni¥os / µREA / UrbanizaciàN
-    if any(ch in s for ch in ("µ", "¥", "à", "¨", "¢", "¤", "�")):
-        best = s
-        best_score = _accent_score(s)
-        for target in ("cp850", "cp437"):
-            try:
-                cand = s.encode("cp1252").decode(target)
-                score = _accent_score(cand)
-                if score >= best_score and cand:
-                    best, best_score = cand, score
-            except Exception:
-                pass
-        s = best
-
-    return s
 
 
 def _elem_to_dict(elem: ET.Element):
     children = list(elem)
     if not children:
-        return (elem.text or "").strip()
+        return elem.text or ""
 
     grouped = {}
     for ch in children:
@@ -134,12 +88,7 @@ def xml_a_json(
     # 2) Limpieza segura
     xml_limpio = xml_string.strip().lstrip("\ufeff")
 
-    # 3) Reparar mojibake si ya viene mal
-    #if _looks_mojibake(xml_limpio):
-     #   xml_limpio = _repair_mojibake(xml_limpio)
-
-    # 4) Escapar ampersands sueltos (sin romper entidades)
-    xml_limpio = _escape_bare_ampersands(xml_limpio)
+    # 3) (ETLV3) Sin procesamiento de texto para maximizar performance
 
     # 5) Parse
     try:
