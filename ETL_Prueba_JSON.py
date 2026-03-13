@@ -1054,6 +1054,16 @@ def ETL_BIMSA(
 
     df = pd.DataFrame(data)
 
+    # ---------------------------------------------------------
+    # Normalizar columnas que vienen del backend como "Anio_*"
+    # (ej: Anio_inicio, Anio_publicado) para evitar problemas
+    # con plantillas que esperan "Ano_*" o variantes similares
+    # ---------------------------------------------------------
+    df = df.rename(columns=lambda c: (
+        c.replace("Anio_", "Año_")
+         .replace("anio_", "año_")
+    ) if isinstance(c, str) else c)
+
     # Nunca Localizacion2
     df = _drop_localizacion2(df)
 
