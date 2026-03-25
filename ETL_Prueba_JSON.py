@@ -105,7 +105,9 @@ CLASICO_OUTPUT_ORDER = [
     "Tipo_Desarrollo",
 
     "Región", "Region",
+    "Clave_Estado_Proyecto",
     "Estado_Proyecto",
+    "Clave_Del_Cd_Mun_Proyecto",
     "Del_Cd_Mun_Proyecto",
     "Localizacion1",
     "C.P.", "C.P",
@@ -622,14 +624,7 @@ def _resolve_resource_path(filename: str) -> Optional[str]:
 def _is_clasico(tipo_reporte: str) -> bool:
     return str(tipo_reporte).strip().lower() == "clasico"
 
-def _apply_explicit_order_clasico(df: pd.DataFrame) -> pd.DataFrame:
-    ordered = [c for c in CLASICO_OUTPUT_ORDER if c in df.columns]
-    rest = [c for c in df.columns if c not in ordered]
-    return df[ordered + rest]
 
-def _drop_otros_columns_for_clasico(df: pd.DataFrame) -> pd.DataFrame:
-    keep_cols = [c for c in df.columns if _CLASSICO_GROUP_BY_ORIG_HEADER.get(c, "Otros") != "Otros"]
-    return df[keep_cols]
 
 def _drop_localizacion2(df: pd.DataFrame) -> pd.DataFrame:
     def key(x: str) -> str:
@@ -1088,6 +1083,12 @@ def ETL_BIMSA(
         "puesto_1",
         "puesto_2",
         "puesto_3",
+
+        # 🚀 NUEVOS CAMPOS QUE NO SE DEBEN TRANSFORMAR
+        "clave_tipo_obra",
+        "clave_compania",
+        "clave_del_cd_mun_proyecto",
+        "clave_estado_proyecto",
     }
 
     # Precompute text columns once (avoids repeated dtype scanning)
@@ -1098,6 +1099,10 @@ def ETL_BIMSA(
         norm_col = _norm_colkey(col)
 
         if norm_col in CATALOGO_COLUMNS:
+            continue
+
+        # 🚀 HARD STOP para claves (evita cualquier transformación)
+        if "clave_" in norm_col:
             continue
 
         series = df[col]
@@ -1170,7 +1175,7 @@ def ETL_BIMSA(
                 has_slash = any("/" in v for v in sample)
             except Exception:
                 pass
-            df[col] = pd.to_datetime(s, errors="coerce", dayfirst=has_slash)
+            df[col] = pd.to_datetime(s, errors="coerce", dayfirst=has_slash).dt.date
 
     # Numéricos generales
     for col in df.columns:
@@ -1207,25 +1212,16 @@ def ETL_BIMSA(
             drop_cols += [f"Nombre_{n}", f"Paterno_{n}", f"Materno_{n}"]
         df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
-        df = _apply_explicit_order_clasico(df)
-        df = _drop_otros_columns_for_clasico(df)
-
     # Export DF
-    # asegurar columnas del esquema clasico
+    # ⚠️ YA NO FORZAMOS ORDEN PARA CLÁSICO (se usará mapeo por plantilla)
     if es_clasico:
-
-        for col in CLASICO_OUTPUT_ORDER:
-            if col not in df.columns:
-                df[col] = None
-
-        df = df[CLASICO_OUTPUT_ORDER]
+        pass
 
     df_export = df.copy()
 
     if es_clasico:
         df_export = df_export.rename(columns=RENAME_HEADERS_CLASICO)
 
-    df_export.columns = _export_headers_with_spaces(df_export.columns)
 
     # OUTPUT
     if return_mode == "bytes":
@@ -1303,35 +1299,70 @@ def ETL_BIMSA(
         matched_columns = []
 
         for header in template_headers:
-
             key = _norm_colkey(header)
 
-            # coincidencia exacta
+            # 1. match exacto
             if key in df_norm_map:
                 matched_columns.append(df_norm_map[key])
                 continue
 
-            # coincidencia flexible
+            # 2. match flexible (más controlado)
             match = None
             for k, original in df_norm_map.items():
-                if key in k or k in key:
+                if key == k:
+                    match = original
+                    break
+                if key in k:
                     match = original
                     break
 
-            matched_columns.append(match)
+            # 3. si no encontró → crear columna vacía
+            if match is None:
+                df_export[header] = None
+                matched_columns.append(header)
+            else:
+                matched_columns.append(match)
+
+        # reconstruir dataframe
+        df_export = df_export[matched_columns]
+
+        # renombrar a headers de plantilla
+        df_export.columns = template_headers
+
+    # =========================================================
+    # MATCH INTELIGENTE TAMBIÉN PARA CLÁSICO (igual que no-clásico)
+    # =========================================================
+    if es_clasico:
+
+        # mapa normalizado de columnas del dataframe
+        df_norm_map = {
+            _norm_colkey(col): col
+            for col in df_export.columns
+        }
+
+        matched_columns = []
+
+        for header in template_headers:
+
+            key = _norm_colkey(header)
+
+            # match exacto normalizado
+            if key in df_norm_map:
+                matched_columns.append(df_norm_map[key])
+                continue
+
+            # fallback: no encontró → columna vacía
+            matched_columns.append(None)
 
         df_export = df_export.reindex(columns=matched_columns)
         df_export.columns = template_headers
-
-    # Reordenar dataframe según los encabezados de la plantilla
-    if es_clasico:
-        df_export = df_export.reindex(columns=template_headers)
 
     # =========================================================
     # Insertar dataframe en la plantilla
     # =========================================================
 
     # Optimized insertion using numpy (much faster than nested loops)
+    df_export = df_export.where(pd.notnull(df_export), None)
     data_matrix = df_export.to_numpy()
 
     total_rows, total_cols = data_matrix.shape
@@ -1389,7 +1420,7 @@ def ETL_BIMSA(
     # =========================================================
 
     _format_date_columns_no_time(ws, df, first_data_row)
-    _format_numeric_columns(ws, df, first_data_row)
+    _format_numeric_columns(ws, df_export, first_data_row)
 
     # =========================================================
     # Altura de filas

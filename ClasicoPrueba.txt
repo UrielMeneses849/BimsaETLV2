@@ -1,0 +1,152 @@
+<WS_CL_OBRAS>
+
+  <datos>
+    <Clave_Proyecto>OC999001</Clave_Proyecto>
+    <Fecha_publicacion>01/02/2026</Fecha_publicacion>
+    <Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+    <Proyecto>TORRE EMPRESARIAL ALPHA</Proyecto>
+    <Localizacion1>AV. INSURGENTES SUR #1234, CDMX</Localizacion1>
+    <Localizacion2></Localizacion2>
+    <Etapa>Obra Negociada</Etapa>
+    <Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+    <Region>Centro</Region>
+
+    <Clave_Estado_Proyecto>09</Clave_Estado_Proyecto>
+    <Estado_Proyecto>Ciudad de México</Estado_Proyecto>
+
+    <Clave_Del_Cd_Mun_Proyecto>ECH</Clave_Del_Cd_Mun_Proyecto>
+    <Del_Cd_Mun_Proyecto>BENITO JUAREZ</Del_Cd_Mun_Proyecto>
+    <C.P.>03100</C.P.>
+
+    <Moneda>$</Moneda>
+    <Inversion>55000000</Inversion>
+
+    <Fecha_Inicio>10/02/2026</Fecha_Inicio>
+    <Fecha_Terminacion>10/12/2026</Fecha_Terminacion>
+
+    <Genero>Oficinas</Genero>
+    <Subgenero>Corporativo</Subgenero>
+    <Tipo_Obra>Torre Empresarial</Tipo_Obra>
+    <Clave_Tipo_Obra>TEO</Clave_Tipo_Obra>
+    <Sector>Privado</Sector>
+
+    <Numero_Unidades>10</Numero_Unidades>
+    <Num_Niveles>12</Num_Niveles>
+
+    <Sup_Construida>5000</Sup_Construida>
+    <Sup_Urbanizada>0</Sup_Urbanizada>
+
+    <Descripcion>Edificio corporativo con áreas comerciales</Descripcion>
+    <Acabados>Vidrio templado y acero</Acabados>
+    <Observaciones>Proyecto en fase inicial</Observaciones>
+
+    <Compania>CONSTRUCTORA FUTURA</Compania>
+    <Clave_Compania>CFA</Clave_Compania>
+    <Direccion_Compania>AV. REFORMA #500</Direccion_Compania>
+    <Colonia>CENTRO</Colonia>
+    <C.P.Compania>06000</C.P.Compania>
+    <Del_Cd_Mun_Compania>CUAUHTEMOC</Del_Cd_Mun_Compania>
+    <Estado_Compania>Ciudad de México</Estado_Compania>
+  </datos>
+
+
+  <datos>
+    <Clave_Proyecto>OC999002</Clave_Proyecto>
+    <Fecha_publicacion>05/02/2026</Fecha_publicacion>
+    <Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+    <Proyecto>PLAZA COMERCIAL DEL NORTE</Proyecto>
+    <Localizacion1>BLVD. MORELOS #450, MONTERREY</Localizacion1>
+    <Localizacion2></Localizacion2>
+    <Etapa>Obra Negociada</Etapa>
+    <Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+    <Region>Norte</Region>
+
+    <Clave_Estado_Proyecto>EDH</Clave_Estado_Proyecto>
+    <Estado_Proyecto>Nuevo León</Estado_Proyecto>
+
+    <Clave_Del_Cd_Mun_Proyecto>MTY</Clave_Del_Cd_Mun_Proyecto>
+    <Del_Cd_Mun_Proyecto>MONTERREY</Del_Cd_Mun_Proyecto>
+    <C.P.>64000</C.P.>
+
+    <Moneda>$</Moneda>
+    <Inversion>78000000</Inversion>
+
+    <Fecha_Inicio>15/02/2026</Fecha_Inicio>
+    <Fecha_Terminacion>15/11/2026</Fecha_Terminacion>
+
+    <Genero>Comercial</Genero>
+    <Subgenero>Retail</Subgenero>
+    <Tipo_Obra>Plaza Comercial</Tipo_Obra>
+    <Clave_Tipo_Obra>PCO</Clave_Tipo_Obra>
+    <Sector>Privado</Sector>
+
+    <Numero_Unidades>25</Numero_Unidades>
+    <Num_Niveles>3</Num_Niveles>
+
+    <Sup_Construida>8200</Sup_Construida>
+    <Sup_Urbanizada>1200</Sup_Urbanizada>
+
+    <Descripcion>Centro comercial con estacionamiento subterráneo</Descripcion>
+    <Acabados>Concreto pulido y cristal</Acabados>
+    <Observaciones>Incluye área de food court</Observaciones>
+
+    <Compania>GRUPO NORTE CONSTRUCCION</Compania>
+    <Clave_Compania>GNC</Clave_Compania>
+    <Direccion_Compania>AV. FUNDADORES #890</Direccion_Compania>
+    <Colonia>VALLE</Colonia>
+    <C.P.Compania>66220</C.P.Compania>
+    <Del_Cd_Mun_Compania>SAN PEDRO</Del_Cd_Mun_Compania>
+    <Estado_Compania>Nuevo León</Estado_Compania>
+  </datos>
+
+
+  <datos>
+    <Clave_Proyecto>OC999003</Clave_Proyecto>
+    <Fecha_publicacion>10/02/2026</Fecha_publicacion>
+    <Tipo_Proyecto>Proyecto contratado</Tipo_Proyecto>
+    <Proyecto>RESIDENCIAL BOSQUES DEL SUR</Proyecto>
+    <Localizacion1>CALLE PINOS #200, GUADALAJARA</Localizacion1>
+    <Localizacion2></Localizacion2>
+    <Etapa>Obra Negociada</Etapa>
+    <Tipo_Desarrollo>Obra Nueva</Tipo_Desarrollo>
+    <Region>Oeste</Region>
+
+    <Clave_Estado_Proyecto>14</Clave_Estado_Proyecto>
+    <Estado_Proyecto>Jalisco</Estado_Proyecto>
+
+    <Clave_Del_Cd_Mun_Proyecto>GDL</Clave_Del_Cd_Mun_Proyecto>
+    <Del_Cd_Mun_Proyecto>GUADALAJARA</Del_Cd_Mun_Proyecto>
+    <C.P.>44100</C.P.>
+
+    <Moneda>$</Moneda>
+    <Inversion>32000000</Inversion>
+
+    <Fecha_Inicio>20/02/2026</Fecha_Inicio>
+    <Fecha_Terminacion>20/08/2026</Fecha_Terminacion>
+
+    <Genero>Vivienda</Genero>
+    <Subgenero>Residencial</Subgenero>
+    <Tipo_Obra>Fraccionamiento</Tipo_Obra>
+    <Clave_Tipo_Obra>FRA</Clave_Tipo_Obra>
+    <Sector>Privado</Sector>
+
+    <Numero_Unidades>40</Numero_Unidades>
+    <Num_Niveles>2</Num_Niveles>
+
+    <Sup_Construida>3600</Sup_Construida>
+    <Sup_Urbanizada>2000</Sup_Urbanizada>
+
+    <Descripcion>Conjunto habitacional con áreas verdes</Descripcion>
+    <Acabados>Block, loseta cerámica</Acabados>
+    <Observaciones>Zona de alta plusvalía</Observaciones>
+
+    <Compania>DESARROLLOS DEL PACIFICO</Compania>
+    <Clave_Compania>DPC</Clave_Compania>
+    <Direccion_Compania>AV. VALLARTA #3000</Direccion_Compania>
+    <Colonia>ARCOS</Colonia>
+    <C.P.Compania>44130</C.P.Compania>
+    <Del_Cd_Mun_Compania>GUADALAJARA</Del_Cd_Mun_Compania>
+    <Estado_Compania>Jalisco</Estado_Compania>
+  </datos>
+
+</WS_CL_OBRAS>
