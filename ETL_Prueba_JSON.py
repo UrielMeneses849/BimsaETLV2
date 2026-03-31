@@ -416,6 +416,25 @@ def _norm_noaccents_lower(s: str) -> str:
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
+def _remove_accents_text(s: str) -> str:
+    if not isinstance(s, str):
+        return s
+
+    # preservar ñ manualmente
+    placeholder_lower = "__enie__"
+    placeholder_upper = "__ENIE__"
+
+    s = s.replace("ñ", placeholder_lower).replace("Ñ", placeholder_upper)
+
+    # quitar acentos
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+
+    # restaurar ñ
+    s = s.replace(placeholder_lower, "ñ").replace(placeholder_upper, "Ñ")
+
+    return s
+
 def _strip_wrapping_quotes(s: str) -> str:
     if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
         return s[1:-1]
@@ -1217,7 +1236,12 @@ def ETL_BIMSA(
     if es_clasico:
         pass
 
+    REMOVE_ACCENTS = True
+
     df_export = df.copy()
+    if REMOVE_ACCENTS:
+        for col in df_export.select_dtypes(include="object").columns:
+            df_export[col] = df_export[col].map(_remove_accents_text)
 
     if es_clasico:
         df_export = df_export.rename(columns=RENAME_HEADERS_CLASICO)
