@@ -410,11 +410,8 @@ def _repair_all_strings_df(df: pd.DataFrame) -> pd.DataFrame:
 # =========================================================
 
 def _norm_noaccents_lower(s: str) -> str:
-    s = (s or "").strip().lower()
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(ch for ch in s if not unicodedata.combining(ch))
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    # versión ligera sin manejo de acentos
+    return (s or "").strip().lower()
 
 def _remove_accents_text(s: str) -> str:
     if not isinstance(s, str):
@@ -545,9 +542,10 @@ def _smart_text_format(v, col_name: str):
     if not s:
         return None
 
-    k = _norm_noaccents_lower(s)
-    if k in CITY_FIXES:
-        return CITY_FIXES[k]
+    # ACCENTS DISABLED (performance mode)
+    # k = _norm_noaccents_lower(s)
+    # if k in CITY_FIXES:
+    #     return CITY_FIXES[k]
 
     if EMAIL_RE.match(s):
         return s.lower()
@@ -1081,8 +1079,9 @@ def ETL_BIMSA(
     # Nunca Localizacion2
     df = _drop_localizacion2(df)
 
-    # ✅ FIX GLOBAL DE CARACTERES (a TODO texto)
-    df = _repair_all_strings_df(df)
+    # FIX GLOBAL DE CARACTERES
+    #  DISABLED mojibake repair (performance boost)
+    # df = _repair_all_strings_df(df)
 
     # Columnas catálogo (no deben procesarse)
     CATALOGO_COLUMNS = {
@@ -1236,9 +1235,11 @@ def ETL_BIMSA(
     if es_clasico:
         pass
 
+    # 🔥 HOTFIX FINAL: remover acentos del output (preserva ñ)
     REMOVE_ACCENTS = True
 
     df_export = df.copy()
+
     if REMOVE_ACCENTS:
         for col in df_export.select_dtypes(include="object").columns:
             df_export[col] = df_export[col].map(_remove_accents_text)
