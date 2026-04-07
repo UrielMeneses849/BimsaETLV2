@@ -822,8 +822,13 @@ def _format_numeric_columns(ws, df_orig: pd.DataFrame, first_data_row: int):
     for i, col in enumerate(df_orig.columns, start=1):
         cname = _norm_noaccents_lower(str(col)).replace(" ", "_")
 
+        # 🔥 FORCE years without commas
+        if cname in ("anio_publicado", "Anio_publicado", "anio_inicio", "Anio_inicio"):
+            formats[i] = '0'
+            continue
+
         if "inversion" in cname:
-            formats[i] = '$#,##0'
+            formats[i] = '[$MXN] #,##0'
         elif col in ("Sup_Construida", "Sup_Urbanizada"):
             formats[i] = '#,##0'
         elif "sup_" in cname or "superficie" in cname:
@@ -842,7 +847,35 @@ def _format_numeric_columns(ws, df_orig: pd.DataFrame, first_data_row: int):
     for r in range(first_data_row, ws.max_row + 1):
         for cidx, fmt in formats.items():
             cell = ws.cell(row=r, column=cidx)
-            if isinstance(cell.value, (int, float)) and cell.value is not None:
+
+            if cell.value is None:
+                continue
+
+            # 🔥 FORZAR años sin separador de miles
+            header_name = str(ws.cell(row=first_data_row - 1, column=cidx).value)
+            k = unicodedata.normalize("NFKD", header_name)
+            k = "".join(ch for ch in k if not unicodedata.combining(ch))
+            k = k.lower().replace(" ", "_")
+
+            if k in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
+                try:
+                    cell.value = int(float(cell.value))
+                except Exception:
+                    pass
+                cell.number_format = '0'
+                continue
+
+            # 🔥 FORZAR inversión con símbolo de moneda
+            if "inversion" in k:
+                try:
+                    cell.value = float(str(cell.value).replace(",", ""))
+                except Exception:
+                    pass
+                cell.number_format = '"$"#,##0'
+                continue
+
+            # resto de columnas
+            if isinstance(cell.value, (int, float)):
                 cell.number_format = fmt
 
 
@@ -1206,6 +1239,16 @@ def ETL_BIMSA(
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce")
 
+    # 🔥 FIX GLOBAL: años como numéricos (todos los reportes)
+    for col in df.columns:
+        # normalizar quitando acentos SOLO para identificar la columna
+        k = unicodedata.normalize("NFKD", str(col))
+        k = "".join(ch for ch in k if not unicodedata.combining(ch))
+        k = k.lower().replace(" ", "_")
+
+        if k in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+
     # MAPAS: lat/long + dia/mes/año numéricos
     if tipo_upper == "MAPAS":
         def _k(name: str) -> str:
@@ -1230,12 +1273,9 @@ def ETL_BIMSA(
             drop_cols += [f"Nombre_{n}", f"Paterno_{n}", f"Materno_{n}"]
         df = df.drop(columns=[c for c in drop_cols if c in df.columns])
 
-    # Export DF
-    # ⚠️ YA NO FORZAMOS ORDEN PARA CLÁSICO (se usará mapeo por plantilla)
     if es_clasico:
         pass
 
-    # 🔥 HOTFIX FINAL: remover acentos del output (preserva ñ)
     REMOVE_ACCENTS = True
 
     df_export = df.copy()
@@ -1243,6 +1283,22 @@ def ETL_BIMSA(
     if REMOVE_ACCENTS:
         for col in df_export.select_dtypes(include="object").columns:
             df_export[col] = df_export[col].map(_remove_accents_text)
+
+    # 🔥 FIX FINAL DEFINITIVO: asegurar años como enteros SIN comas
+    for col in df_export.columns:
+        k = unicodedata.normalize("NFKD", str(col))
+        k = "".join(ch for ch in k if not unicodedata.combining(ch))
+        k = k.lower().replace(" ", "_")
+
+        if k in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
+            # limpiar posibles comas o strings
+            df_export[col] = (
+                df_export[col]
+                .astype(str)
+                .str.replace(",", "", regex=False)
+                .str.strip()
+            )
+            df_export[col] = pd.to_numeric(df_export[col], errors="coerce").astype("Int64")
 
     if es_clasico:
         df_export = df_export.rename(columns=RENAME_HEADERS_CLASICO)
@@ -1282,20 +1338,6 @@ def ETL_BIMSA(
     wb = load_workbook(template_resolved)
     ws = wb.active
 
-    # =========================================================
-    # Determinar filas de encabezado y datos según tipo reporte
-    # CLASICO:
-    #   fila 1 -> branding
-    #   fila 2 -> clasificación
-    #   fila 3 -> headers
-    #   fila 4 -> data
-    #
-    # OTROS REPORTES:
-    #   fila 1 -> branding
-    #   fila 2 -> headers
-    #   fila 3 -> data
-    # =========================================================
-
     if es_clasico:
         header_row = 3
         first_data_row = 4
@@ -1309,10 +1351,6 @@ def ETL_BIMSA(
         for c in range(1, ws.max_column + 1)
     ]
 
-    # =========================================================
-    # Normalizar encabezados para evitar columnas vacías
-    # (solo para reportes NO CLASICOS)
-    # =========================================================
     if not es_clasico:
 
         # mapa normalizado de columnas del dataframe
@@ -1354,9 +1392,6 @@ def ETL_BIMSA(
         # renombrar a headers de plantilla
         df_export.columns = template_headers
 
-    # =========================================================
-    # MATCH INTELIGENTE TAMBIÉN PARA CLÁSICO (igual que no-clásico)
-    # =========================================================
     if es_clasico:
 
         # mapa normalizado de columnas del dataframe
@@ -1446,6 +1481,23 @@ def ETL_BIMSA(
 
     _format_date_columns_no_time(ws, df, first_data_row)
     _format_numeric_columns(ws, df_export, first_data_row)
+
+    # 🔥 FIX FINAL EXTRA (override total para años)
+    for col_idx, col_name in enumerate(df_export.columns, start=1):
+        k = unicodedata.normalize("NFKD", str(col_name))
+        k = "".join(ch for ch in k if not unicodedata.combining(ch))
+        k = k.lower().replace(" ", "_")
+
+        if k in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
+            for r in range(first_data_row, ws.max_row + 1):
+                cell = ws.cell(row=r, column=col_idx)
+                if cell.value is None:
+                    continue
+                try:
+                    cell.value = int(float(cell.value))
+                except Exception:
+                    pass
+                cell.number_format = '0'
 
     # =========================================================
     # Altura de filas
