@@ -538,6 +538,10 @@ def _smart_text_format(v, col_name: str):
         return v
 
     s = v.strip()
+
+    # 🔥 FIX: limpiar escapes y backslashes desde origen
+    s = _unescape_quotes_backslashes(s)
+
     s = _strip_wrapping_quotes(s)
     if not s:
         return None
@@ -1282,7 +1286,9 @@ def ETL_BIMSA(
 
     if REMOVE_ACCENTS:
         for col in df_export.select_dtypes(include="object").columns:
-            df_export[col] = df_export[col].map(_remove_accents_text)
+            df_export[col] = df_export[col].map(
+                lambda x: _unescape_quotes_backslashes(_remove_accents_text(x)) if isinstance(x, str) else x
+            )
 
     # 🔥 FIX FINAL DEFINITIVO: asegurar años como enteros SIN comas
     for col in df_export.columns:
