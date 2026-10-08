@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import unicodedata
+from copy import copy
 from datetime import datetime
 from io import BytesIO
 from typing import Dict, Optional, List
@@ -111,6 +112,9 @@ CLASICO_OUTPUT_ORDER = [
     "Del_Cd_Mun_Proyecto",
     "Localizacion1",
     "C.P.", "C.P",
+    "Latitud",
+    "Longitud",
+    "Precisión", "Precision",
 
     "Inversion",
     "Fecha_Inicio",
@@ -171,26 +175,37 @@ _CLASSICO_GROUP_BY_ORIG_HEADER: Dict[str, str] = {
 
     "Region": "Ubicación del Proyecto",
     "Región": "Ubicación del Proyecto",
+    "Clave_Estado_Proyecto": "Ubicación del Proyecto",
     "Estado_Proyecto": "Ubicación del Proyecto",
+    "Clave_Del_Cd_Mun_Proyecto": "Ubicación del Proyecto",
     "Del_Cd_Mun_Proyecto": "Ubicación del Proyecto",
     "Localizacion1": "Ubicación del Proyecto",
     "C.P.": "Ubicación del Proyecto",
     "C.P": "Ubicación del Proyecto",
+    "Latitud": "Ubicación del Proyecto",
+    "Longitud": "Ubicación del Proyecto",
+    "Precisión": "Ubicación del Proyecto",
+    "Precision": "Ubicación del Proyecto",
 
     "Inversion": "Caracteristicas del Proyecto",
+    "Inversión (Pesos Mexicanos)": "Caracteristicas del Proyecto",
     "Fecha_Inicio": "Caracteristicas del Proyecto",
     "Fecha_Terminacion": "Caracteristicas del Proyecto",
     "Genero": "Caracteristicas del Proyecto",
     "Subgenero": "Caracteristicas del Proyecto",
+    "Clave_Tipo_Obra": "Caracteristicas del Proyecto",
     "Tipo_Obra": "Caracteristicas del Proyecto",
     "Sector": "Caracteristicas del Proyecto",
     "Sup_Construida": "Caracteristicas del Proyecto",
+    "Sup Construida (m²)": "Caracteristicas del Proyecto",
     "Sup_Urbanizada": "Caracteristicas del Proyecto",
+    "Sup Urbanizada (m²)": "Caracteristicas del Proyecto",
     "Numero_Unidades": "Caracteristicas del Proyecto",
     "Num_Niveles": "Caracteristicas del Proyecto",
     "Descripcion": "Caracteristicas del Proyecto",
 
     "Rol_Compania": "Datos de la Compañia",
+    "Clave_Compania": "Datos de la Compañia",
     "Compania": "Datos de la Compañia",
     "Direccion_Compania": "Datos de la Compañia",
     "Colonia": "Datos de la Compañia",
@@ -201,6 +216,7 @@ _CLASSICO_GROUP_BY_ORIG_HEADER: Dict[str, str] = {
     "Telefono2": "Datos de la Compañia",
     "Telefono3": "Datos de la Compañia",
     "Internet": "Datos de la Compañia",
+    "Pagina Web": "Datos de la Compañia",
 
     "Titulo_1": "Participantes y Contactos",
     "Contacto_1": "Participantes y Contactos",
@@ -580,6 +596,16 @@ def _smart_text_format(v, col_name: str):
 def _export_headers_with_spaces(cols):
     return [str(c).replace("_", " ").strip() for c in cols]
 
+
+def _text_columns(df: pd.DataFrame) -> List[str]:
+    """Columnas de texto compatible con pandas 2.x y 3.x."""
+    return [
+        column
+        for column in df.columns
+        if pd.api.types.is_object_dtype(df[column].dtype)
+        or pd.api.types.is_string_dtype(df[column].dtype)
+    ]
+
 def _compute_widths_from_df(df: pd.DataFrame, padding: int = 4, max_width: int = 60) -> dict:
     if df.empty:
         return {}
@@ -603,6 +629,164 @@ def _norm_colkey(name: str) -> str:
     s = s.replace(" ", "_").replace("-", "_")
     s = re.sub(r"_+", "_", s)
     return s
+
+
+_CLASSICO_GROUP_BY_NORM_HEADER = {
+    _norm_colkey(header): group
+    for header, group in _CLASSICO_GROUP_BY_ORIG_HEADER.items()
+}
+
+
+def _classico_group_for_header(header: str) -> str:
+    return _CLASSICO_GROUP_BY_NORM_HEADER.get(_norm_colkey(header), "Otros")
+
+
+def _coalesce_classico_geo_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza los nombres de geolocalización de las distintas fuentes.
+
+    La fuente actual usa ``proy_ubicacionlatitud`` y
+    ``proy_ubicacionlongitud``; se aceptan además los nombres habituales que
+    puede enviar el proceso productivo. Una precisión ausente se conserva como
+    celda vacía: nunca se infiere a partir de otro dato.
+    """
+    aliases = {
+        "Latitud": (
+            "Latitud", "Latitude", "Lat", "proy_ubicacionlatitud",
+            "proy_ubicacion_latitud",
+        ),
+        "Longitud": (
+            "Longitud", "Longitude", "Lng", "Lon",
+            "proy_ubicacionlongitud", "proy_ubicacion_longitud",
+        ),
+        "Precisión": (
+            "Precisión", "Precision", "proy_ubicacionprecision",
+            "proy_ubicacion_precision",
+        ),
+    }
+
+    columns_by_key = {}
+    for column in df.columns:
+        columns_by_key.setdefault(_norm_colkey(column), []).append(column)
+
+    for target, candidate_names in aliases.items():
+        values = pd.Series(pd.NA, index=df.index, dtype="object")
+        seen_columns = set()
+
+        for candidate in candidate_names:
+            for column in columns_by_key.get(_norm_colkey(candidate), []):
+                if column in seen_columns:
+                    continue
+                seen_columns.add(column)
+                source = df[column].replace(r"^\s*$", pd.NA, regex=True)
+                values = values.combine_first(source)
+
+        df[target] = values
+
+    for target in ("Latitud", "Longitud"):
+        df[target] = pd.to_numeric(df[target], errors="coerce")
+
+    return df
+
+
+def _classico_source_frames(df: pd.DataFrame):
+    """Devuelve solamente las hojas que tienen registros."""
+    origin_column = next(
+        (column for column in df.columns if _norm_colkey(column) == "origen"),
+        None,
+    )
+
+    if origin_column is None:
+        return [("Construleads", df.copy(), False)]
+
+    is_explorer = (
+        df[origin_column]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+        .eq("explorer")
+    )
+
+    frames = []
+    construleads = df.loc[~is_explorer].copy()
+    explorer = df.loc[is_explorer].copy()
+
+    if not construleads.empty:
+        frames.append(("Construleads", construleads, False))
+    if not explorer.empty:
+        frames.append(("Explorer", explorer, True))
+
+    return frames
+
+
+def _copy_classico_worksheet(wb, source_ws):
+    """Copia la estructura; cada hoja recibe un logo independiente al final."""
+    target_ws = wb.copy_worksheet(source_ws)
+    target_ws._images = []
+    return target_ws
+
+
+def _prepare_classico_worksheet(ws, *, explorer: bool) -> None:
+    """Agrega geolocalización y adapta la plantilla para cada fuente."""
+    header_row = 3
+
+    # Las combinaciones originales no se actualizan de forma fiable al
+    # insertar/eliminar columnas. Se reconstruyen después con los grupos
+    # definitivos de cada hoja.
+    for merged_range in list(ws.merged_cells.ranges):
+        ws.unmerge_cells(str(merged_range))
+
+    headers = [ws.cell(header_row, c).value for c in range(1, ws.max_column + 1)]
+    header_keys = [_norm_colkey(header) for header in headers]
+
+    if "latitud" not in header_keys:
+        cp_index = next(
+            (
+                index
+                for index, key in enumerate(header_keys, start=1)
+                if key in ("c.p.", "c.p")
+            ),
+            13,
+        )
+        insert_at = cp_index + 1
+        ws.insert_cols(insert_at, amount=3)
+
+        source_col = insert_at - 1
+        source_letter = get_column_letter(source_col)
+        source_width = ws.column_dimensions[source_letter].width
+
+        for column in range(insert_at, insert_at + 3):
+            column_letter = get_column_letter(column)
+            ws.column_dimensions[column_letter].width = source_width or 14
+            for row in range(1, ws.max_row + 1):
+                ws.cell(row, column)._style = copy(ws.cell(row, source_col)._style)
+                ws.cell(row, column).alignment = copy(ws.cell(row, source_col).alignment)
+
+        for offset, header in enumerate(("Latitud", "Longitud", "Precisión")):
+            ws.cell(header_row, insert_at + offset).value = header
+
+    if explorer:
+        headers = [ws.cell(header_row, c).value for c in range(1, ws.max_column + 1)]
+        company_columns = [
+            index
+            for index, header in enumerate(headers, start=1)
+            if _classico_group_for_header(header) == "Datos de la Compañia"
+        ]
+        if company_columns:
+            ws.delete_cols(min(company_columns), len(company_columns))
+
+    # El texto de branding y las clasificaciones se regeneran para evitar
+    # residuos de la plantilla después del cambio de columnas.
+    for column in range(1, ws.max_column + 1):
+        ws.cell(1, column).value = None
+        ws.cell(2, column).value = None
+
+    final_headers = [
+        str(ws.cell(header_row, c).value).strip()
+        for c in range(1, ws.max_column + 1)
+    ]
+    _apply_classification_row(ws, header_row, ws.max_column, final_headers)
 
 def _apply_width_overrides(ws, df_export: pd.DataFrame):
     TARGET_WIDTHS = {
@@ -752,7 +936,7 @@ def _apply_section_borders(ws, header_row: int, first_data_row: int, nrows: int,
     section_border = Border(left=section_side)
 
     # Determinar el grupo de cada columna
-    groups = [_CLASSICO_GROUP_BY_ORIG_HEADER.get(h, "Otros") for h in orig_headers]
+    groups = [_classico_group_for_header(h) for h in orig_headers]
 
     # Columnas donde cambia el grupo
     section_starts = []
@@ -982,9 +1166,10 @@ def _apply_classification_row(ws, header_row: int, ncols: int, orig_headers: Lis
     cls_row = header_row - 1
     ws.row_dimensions[cls_row].height = 22
 
-    groups = [_CLASSICO_GROUP_BY_ORIG_HEADER.get(h, "Otros") for h in orig_headers]
+    groups = [_classico_group_for_header(h) for h in orig_headers]
 
     c = 1
+    section_index = 0
     while c <= ncols:
         g = groups[c - 1]
         start = c
@@ -995,21 +1180,31 @@ def _apply_classification_row(ws, header_row: int, ncols: int, orig_headers: Lis
         ws.merge_cells(start_row=cls_row, start_column=start, end_row=cls_row, end_column=end)
         cell = ws.cell(cls_row, start)
         cell.value = g
-        fill = _GROUP_FILLS.get(g, _GROUP_FILLS["Otros"])
+        # El color depende de la posición, no del nombre del grupo. Así, al
+        # retirar "Datos de la Compañía" de Explorer, "Participantes y
+        # Contactos" ocupa correctamente el bloque gris y se conserva el
+        # patrón naranja / gris / naranja / gris.
+        is_orange = section_index % 2 == 0
+        fill = PatternFill("solid", COLOR_ORANGE if is_orange else COLOR_GRAY)
+        font = Font(
+            name="Poppins",
+            size=11,
+            bold=True,
+            color="FFFFFF" if is_orange else "000000",
+        )
         cell.fill = fill
-
-        # fuente dinámica según color
-        if fill.start_color.rgb.endswith(COLOR_ORANGE):
-            cell.font = Font(name="Poppins", size=11, bold=True, color="FFFFFF")
-        else:
-            cell.font = Font(name="Poppins", size=11, bold=True, color="000000")
-
+        cell.font = font
         cell.alignment = _GROUP_ALIGN
 
         for cc in range(start, end + 1):
             ws.cell(cls_row, cc).fill = fill
+            ws.cell(cls_row, cc).font = font
+            header_cell = ws.cell(header_row, cc)
+            header_cell.fill = fill
+            header_cell.font = font
 
         c = end + 1
+        section_index += 1
 
 
 # =========================================================
@@ -1147,7 +1342,7 @@ def ETL_BIMSA(
     }
 
     # Precompute text columns once (avoids repeated dtype scanning)
-    text_columns = df.select_dtypes(include="object").columns
+    text_columns = _text_columns(df)
 
     for col in text_columns:
 
@@ -1220,6 +1415,9 @@ def ETL_BIMSA(
             df[c] = df[c].map(_fix_shouty_caps_mixed)
             df[c] = df[c].map(lambda x: _sentence_case_spanish(x) if isinstance(x, str) else x)
 
+    if es_clasico:
+        df = _coalesce_classico_geo_columns(df)
+
     # Fechas
     for col in df.columns:
         if "fecha" in str(col).lower():
@@ -1285,7 +1483,7 @@ def ETL_BIMSA(
     df_export = df.copy()
 
     if REMOVE_ACCENTS:
-        for col in df_export.select_dtypes(include="object").columns:
+        for col in _text_columns(df_export):
             df_export[col] = df_export[col].map(
                 lambda x: _unescape_quotes_backslashes(_remove_accents_text(x)) if isinstance(x, str) else x
             )
@@ -1342,193 +1540,136 @@ def ETL_BIMSA(
         raise FileNotFoundError(f"No se encontró la plantilla: {template_path}")
 
     wb = load_workbook(template_resolved)
-    ws = wb.active
+    base_ws = wb.active
 
     if es_clasico:
-        header_row = 3
-        first_data_row = 4
+        source_frames = _classico_source_frames(df_export)
+        worksheets = [base_ws]
+        for _ in source_frames[1:]:
+            worksheets.append(_copy_classico_worksheet(wb, base_ws))
+
+        sheet_jobs = []
+        for ws, (sheet_name, source_df, is_explorer) in zip(worksheets, source_frames):
+            ws.title = sheet_name
+            ws._images = []
+            _prepare_classico_worksheet(ws, explorer=is_explorer)
+            sheet_jobs.append((ws, source_df, 3, 4))
     else:
-        header_row = 2
-        first_data_row = 3
+        sheet_jobs = [(base_ws, df_export, 2, 3)]
 
-    # Leer encabezados reales desde la plantilla
-    template_headers = [
-        str(ws.cell(header_row, c).value).strip()
-        for c in range(1, ws.max_column + 1)
-    ]
+    for ws, source_df, header_row, first_data_row in sheet_jobs:
+        template_headers = [
+            str(ws.cell(header_row, c).value).strip()
+            for c in range(1, ws.max_column + 1)
+        ]
 
-    if not es_clasico:
-
-        # mapa normalizado de columnas del dataframe
+        working_df = source_df.copy()
         df_norm_map = {
-            _norm_colkey(col): col
-            for col in df_export.columns
+            _norm_colkey(column): column
+            for column in working_df.columns
         }
-
         matched_columns = []
 
         for header in template_headers:
             key = _norm_colkey(header)
 
-            # 1. match exacto
             if key in df_norm_map:
                 matched_columns.append(df_norm_map[key])
                 continue
 
-            # 2. match flexible (más controlado)
             match = None
-            for k, original in df_norm_map.items():
-                if key == k:
-                    match = original
-                    break
-                if key in k:
-                    match = original
-                    break
+            if not es_clasico:
+                for candidate_key, original in df_norm_map.items():
+                    if key in candidate_key:
+                        match = original
+                        break
 
-            # 3. si no encontró → crear columna vacía
-            if match is None:
-                df_export[header] = None
-                matched_columns.append(header)
-            else:
-                matched_columns.append(match)
+            if match is None and not es_clasico:
+                working_df[header] = None
+                match = header
 
-        # reconstruir dataframe
-        df_export = df_export[matched_columns]
+            matched_columns.append(match)
 
-        # renombrar a headers de plantilla
-        df_export.columns = template_headers
+        if es_clasico:
+            working_df = working_df.reindex(columns=matched_columns)
+        else:
+            working_df = working_df[matched_columns]
+        working_df.columns = template_headers
 
-    if es_clasico:
+        # Insertar el dataframe en la hoja.
+        working_df = working_df.where(pd.notnull(working_df), None)
+        data_matrix = working_df.to_numpy()
 
-        # mapa normalizado de columnas del dataframe
-        df_norm_map = {
-            _norm_colkey(col): col
-            for col in df_export.columns
-        }
+        for r_offset, row in enumerate(data_matrix):
+            excel_row = first_data_row + r_offset
+            for col_index, value in enumerate(row, start=1):
+                ws.cell(excel_row, col_index, value)
 
-        matched_columns = []
+        ncols = ws.max_column
+        nrows = first_data_row + len(working_df) - 1
 
-        for header in template_headers:
+        if ws.max_row > nrows:
+            ws.delete_rows(nrows + 1, ws.max_row - nrows)
 
-            key = _norm_colkey(header)
-
-            # match exacto normalizado
-            if key in df_norm_map:
-                matched_columns.append(df_norm_map[key])
-                continue
-
-            # fallback: no encontró → columna vacía
-            matched_columns.append(None)
-
-        df_export = df_export.reindex(columns=matched_columns)
-        df_export.columns = template_headers
-
-    # =========================================================
-    # Insertar dataframe en la plantilla
-    # =========================================================
-
-    # Optimized insertion using numpy (much faster than nested loops)
-    df_export = df_export.where(pd.notnull(df_export), None)
-    data_matrix = df_export.to_numpy()
-
-    total_rows, total_cols = data_matrix.shape
-
-    for r_offset in range(total_rows):
-
-        excel_row = first_data_row + r_offset
-        row = data_matrix[r_offset]
-
-        for col_index in range(total_cols):
-            ws.cell(excel_row, col_index + 1, row[col_index])
-
-    ncols = ws.max_column
-
-    # última fila REAL con datos
-    nrows = first_data_row + len(df_export) - 1
-
-    # eliminar filas sobrantes debajo del último registro
-    if ws.max_row > nrows:
-        ws.delete_rows(nrows + 1, ws.max_row - nrows)
-
-    # =========================================================
-    # Aplicar estilos (tipografía + patrón de cebra)
-    # =========================================================
-
-    _apply_styles_excel_and_sheets(
-        ws,
-        header_row=header_row,
-        first_data_row=first_data_row,
-        nrows=nrows,
-        ncols=ncols,
-        orig_headers=template_headers if es_clasico else None
-    )
-
-    # =========================================================
-    # Aplicar branding
-    # =========================================================
-
-    _apply_branding_row(
-        ws,
-        ncols=ncols,
-        empresa=empresa,
-        usuario=usuario,
-        fecha_descarga=fecha_descarga,
-        report_label=report_label,
-        tipo_fecha=tipo_fecha,
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-        logo_filename="logo_bimsa.jpg",
-        logo_path=logo_path,
-    )
-
-    # =========================================================
-    # Formatos numéricos y fechas
-    # =========================================================
-
-    _format_date_columns_no_time(ws, df, first_data_row)
-    _format_numeric_columns(ws, df_export, first_data_row)
-
-    # 🔥 FIX FINAL EXTRA (override total para años)
-    for col_idx, col_name in enumerate(df_export.columns, start=1):
-        k = unicodedata.normalize("NFKD", str(col_name))
-        k = "".join(ch for ch in k if not unicodedata.combining(ch))
-        k = k.lower().replace(" ", "_")
-
-        if k in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
-            for r in range(first_data_row, ws.max_row + 1):
-                cell = ws.cell(row=r, column=col_idx)
-                if cell.value is None:
-                    continue
-                try:
-                    cell.value = int(float(cell.value))
-                except Exception:
-                    pass
-                cell.number_format = '0'
-
-    # =========================================================
-    # Altura de filas
-    # =========================================================
-
-    if AUTO_ROW_HEIGHT:
-        min_h = AUTO_ROW_MIN_HEIGHT
-
-        if EXCEL_WEB_MODE:
-            min_h = max(min_h, EXCEL_WEB_MIN_ROW_HEIGHT)
-
-        _apply_auto_row_heights(
+        _apply_styles_excel_and_sheets(
             ws,
-            first_data_row=first_data_row,
-            min_h=min_h,
-            max_h=AUTO_ROW_MAX_HEIGHT,
-            line_h=AUTO_LINE_HEIGHT,
-        )
-    else:
-        _apply_fixed_row_height(
-            ws,
+            header_row=header_row,
             first_data_row=first_data_row,
             nrows=nrows,
-            height=60
+            ncols=ncols,
+            orig_headers=template_headers if es_clasico else None,
         )
+
+        _apply_branding_row(
+            ws,
+            ncols=ncols,
+            empresa=empresa,
+            usuario=usuario,
+            fecha_descarga=fecha_descarga,
+            report_label=report_label,
+            tipo_fecha=tipo_fecha,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            logo_filename="logo_bimsa.jpg",
+            logo_path=(logo_path or _resolve_resource_path("logo_bimsa.jpg")) if es_clasico else logo_path,
+        )
+
+        _format_date_columns_no_time(ws, working_df, first_data_row)
+        _format_numeric_columns(ws, working_df, first_data_row)
+        _apply_width_overrides(ws, working_df)
+
+        # FIX FINAL EXTRA (override total para años)
+        for col_idx, col_name in enumerate(working_df.columns, start=1):
+            key = _norm_colkey(col_name)
+            if key in ("ano_publicado", "anio_publicado", "ano_inicio", "anio_inicio"):
+                for row in range(first_data_row, ws.max_row + 1):
+                    cell = ws.cell(row=row, column=col_idx)
+                    if cell.value is None:
+                        continue
+                    try:
+                        cell.value = int(float(cell.value))
+                    except Exception:
+                        pass
+                    cell.number_format = "0"
+
+        if AUTO_ROW_HEIGHT:
+            min_h = AUTO_ROW_MIN_HEIGHT
+            if EXCEL_WEB_MODE:
+                min_h = max(min_h, EXCEL_WEB_MIN_ROW_HEIGHT)
+            _apply_auto_row_heights(
+                ws,
+                first_data_row=first_data_row,
+                min_h=min_h,
+                max_h=AUTO_ROW_MAX_HEIGHT,
+                line_h=AUTO_LINE_HEIGHT,
+            )
+        else:
+            _apply_fixed_row_height(
+                ws,
+                first_data_row=first_data_row,
+                nrows=nrows,
+                height=60,
+            )
 
     # =========================================================
     # Guardar archivo

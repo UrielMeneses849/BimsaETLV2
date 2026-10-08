@@ -2,6 +2,8 @@ bimsa_runs/
 *.xlsx
 .idea/
 .DS_Store
+.venv/
+*.py[cod]
+__pycache__/
 dist/
 build/
-__pycache__/
