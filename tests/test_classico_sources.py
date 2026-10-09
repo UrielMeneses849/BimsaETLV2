@@ -3,6 +3,8 @@ import unittest
 from io import BytesIO
 
 from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.utils.units import pixels_to_EMU, points_to_pixels
 
 from BIMSA_pipeline import process_bimsa
 
@@ -60,6 +62,14 @@ class ClassicoSourceSheetsTest(unittest.TestCase):
         for header in ("Latitud", "Longitud", "Precisión"):
             self.assertIn(header, construleads_headers)
             self.assertIn(header, explorer_headers)
+        self.assertEqual(
+            construleads_headers[-3:],
+            ["Latitud", "Longitud", "Precisión"],
+        )
+        self.assertEqual(
+            explorer_headers[-3:],
+            ["Latitud", "Longitud", "Precisión"],
+        )
 
         self.assertIn("Compania", construleads_headers)
         self.assertNotIn("Compania", explorer_headers)
@@ -85,10 +95,54 @@ class ClassicoSourceSheetsTest(unittest.TestCase):
                 "Caracteristicas del Proyecto",
                 "Participantes y Contactos",
                 "Detalles Adicionales",
+                "Geolocalización",
             ],
         )
         self.assertTrue(groups[3].fill.fgColor.rgb.endswith("E7E6E6"))
         self.assertTrue(groups[4].fill.fgColor.rgb.endswith("ED7D31"))
+        self.assertTrue(groups[5].fill.fgColor.rgb.endswith("E7E6E6"))
+
+        self.assertEqual(len(construleads._images), 1)
+        self.assertEqual(len(explorer._images), 1)
+        for worksheet in (construleads, explorer):
+            image = worksheet._images[0]
+            visible_height_px = image.anchor.ext.cy / pixels_to_EMU(1)
+            expected_offset = pixels_to_EMU(
+                (points_to_pixels(worksheet.row_dimensions[1].height) - visible_height_px) / 2
+            )
+            self.assertAlmostEqual(
+                image.anchor._from.rowOff,
+                expected_offset,
+                delta=1,
+            )
+            visible_width_px = image.anchor.ext.cx / pixels_to_EMU(1)
+            expected_horizontal_offset = pixels_to_EMU(
+                ((worksheet.column_dimensions["A"].width * 8) - visible_width_px) / 2
+            )
+            self.assertAlmostEqual(
+                image.anchor._from.colOff,
+                expected_horizontal_offset,
+                delta=1,
+            )
+
+        construleads_widths = {
+            header: construleads.column_dimensions[
+                get_column_letter(column)
+            ].width
+            for column, header in enumerate(construleads_headers, start=1)
+        }
+        explorer_widths = {
+            header: explorer.column_dimensions[get_column_letter(column)].width
+            for column, header in enumerate(explorer_headers, start=1)
+        }
+        self.assertEqual(construleads_widths["Inversión (Pesos Mexicanos)"], 31)
+        self.assertEqual(construleads_widths["Sup Urbanizada (m²)"], 13)
+        self.assertEqual(construleads_widths["Descripcion"], 127)
+        self.assertAlmostEqual(explorer_widths["Titulo 1"], 13.43, places=2)
+        self.assertAlmostEqual(explorer_widths["Acabados"], 122.43, places=2)
+        self.assertEqual(construleads_widths["Latitud"], 16)
+        self.assertEqual(construleads_widths["Longitud"], 16)
+        self.assertEqual(construleads_widths["Precisión"], 18)
 
     def test_only_explorer_omits_construleads_sheet(self):
         workbook = _workbook_for(_record("Explorer", "EX000001"))

@@ -40,9 +40,9 @@ En el reporte `CLASICO`, los registros se separan por el campo XML `Origen`:
 - Si el XML contiene una sola fuente, el archivo genera solamente esa hoja.
 - Los XML anteriores que no incluyen `Origen` se consideran `Construleads`.
 
-Las columnas `Latitud`, `Longitud` y `Precisión` se muestran dentro del bloque
-"Ubicación del Proyecto". La hoja `Explorer` omite el bloque de datos de la
-compañía.
+Las columnas `Latitud`, `Longitud` y `Precisión` se muestran al final del
+reporte dentro del bloque "Geolocalización". La hoja `Explorer` omite el bloque
+de datos de la compañía.
 
 Para consultar todas las opciones:
 

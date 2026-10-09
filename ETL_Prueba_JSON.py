@@ -5,7 +5,7 @@ import os
 import re
 import sys
 import unicodedata
-from copy import copy
+from copy import copy, deepcopy
 from datetime import datetime
 from io import BytesIO
 from typing import Dict, Optional, List
@@ -17,7 +17,7 @@ from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.utils.units import pixels_to_EMU
+from openpyxl.utils.units import pixels_to_EMU, points_to_pixels
 
 
 # =========================================================
@@ -112,9 +112,6 @@ CLASICO_OUTPUT_ORDER = [
     "Del_Cd_Mun_Proyecto",
     "Localizacion1",
     "C.P.", "C.P",
-    "Latitud",
-    "Longitud",
-    "Precisión", "Precision",
 
     "Inversion",
     "Fecha_Inicio",
@@ -162,6 +159,10 @@ CLASICO_OUTPUT_ORDER = [
     "Acabados",
     "Observaciones",
     "Descripcion_Extra",
+
+    "Latitud",
+    "Longitud",
+    "Precisión", "Precision",
 ]
 
 _CLASSICO_GROUP_BY_ORIG_HEADER: Dict[str, str] = {
@@ -182,10 +183,6 @@ _CLASSICO_GROUP_BY_ORIG_HEADER: Dict[str, str] = {
     "Localizacion1": "Ubicación del Proyecto",
     "C.P.": "Ubicación del Proyecto",
     "C.P": "Ubicación del Proyecto",
-    "Latitud": "Ubicación del Proyecto",
-    "Longitud": "Ubicación del Proyecto",
-    "Precisión": "Ubicación del Proyecto",
-    "Precision": "Ubicación del Proyecto",
 
     "Inversion": "Caracteristicas del Proyecto",
     "Inversión (Pesos Mexicanos)": "Caracteristicas del Proyecto",
@@ -239,6 +236,11 @@ _CLASSICO_GROUP_BY_ORIG_HEADER: Dict[str, str] = {
     "Acabados": "Detalles Adicionales",
     "Observaciones": "Detalles Adicionales",
     "Descripcion_Extra": "Detalles Adicionales",
+
+    "Latitud": "Geolocalización",
+    "Longitud": "Geolocalización",
+    "Precisión": "Geolocalización",
+    "Precision": "Geolocalización",
 }
 
 COLOR_ORANGE = "ED7D31"
@@ -251,6 +253,7 @@ _GROUP_FILLS = {
     "Datos de la Compañia": PatternFill("solid", COLOR_GRAY),
     "Participantes y Contactos": PatternFill("solid", COLOR_ORANGE),
     "Detalles Adicionales": PatternFill("solid", COLOR_GRAY),
+    "Geolocalización": PatternFill("solid", COLOR_ORANGE),
     "Otros": PatternFill("solid", COLOR_GRAY),
 }
 
@@ -721,15 +724,52 @@ def _classico_source_frames(df: pd.DataFrame):
 
 
 def _copy_classico_worksheet(wb, source_ws):
-    """Copia la estructura; cada hoja recibe un logo independiente al final."""
+    """Copia la estructura; las imágenes se restauran de forma independiente."""
     target_ws = wb.copy_worksheet(source_ws)
     target_ws._images = []
     return target_ws
 
 
+def _capture_worksheet_images(ws):
+    """Extrae las imágenes embebidas antes de copiar la hoja.
+
+    ``openpyxl.copy_worksheet`` no copia dibujos y reutilizar el mismo objeto
+    de imagen entre hojas cierra su stream al guardar. Conservar los bytes y
+    recrear cada imagen evita depender de archivos externos en producción.
+    """
+    captured = []
+    for image in ws._images:
+        captured.append({
+            "data": image._data(),
+            "width": image.width,
+            "height": image.height,
+            "anchor": deepcopy(image.anchor),
+        })
+    ws._images = []
+    return captured
+
+
+def _restore_worksheet_images(ws, captured_images) -> None:
+    for captured in captured_images:
+        image = XLImage(BytesIO(captured["data"]))
+        image.width = captured["width"]
+        image.height = captured["height"]
+        image.anchor = deepcopy(captured["anchor"])
+        ws.add_image(image)
+
+
 def _prepare_classico_worksheet(ws, *, explorer: bool) -> None:
-    """Agrega geolocalización y adapta la plantilla para cada fuente."""
+    """Agrega Geolocalización al final y adapta la plantilla por fuente."""
     header_row = 3
+
+    # Capturar los anchos por encabezado antes de cualquier eliminación.
+    # openpyxl mueve celdas al insertar/eliminar columnas, pero no desplaza sus
+    # ColumnDimension; reasignarlas por nombre conserva la plantilla original.
+    original_widths = {}
+    for column in range(1, ws.max_column + 1):
+        header = ws.cell(header_row, column).value
+        width = ws.column_dimensions[get_column_letter(column)].width
+        original_widths[_norm_colkey(header)] = width
 
     # Las combinaciones originales no se actualizan de forma fiable al
     # insertar/eliminar columnas. Se reconstruyen después con los grupos
@@ -741,30 +781,16 @@ def _prepare_classico_worksheet(ws, *, explorer: bool) -> None:
     header_keys = [_norm_colkey(header) for header in headers]
 
     if "latitud" not in header_keys:
-        cp_index = next(
-            (
-                index
-                for index, key in enumerate(header_keys, start=1)
-                if key in ("c.p.", "c.p")
-            ),
-            13,
-        )
-        insert_at = cp_index + 1
-        ws.insert_cols(insert_at, amount=3)
+        append_at = ws.max_column + 1
+        source_col = ws.max_column
 
-        source_col = insert_at - 1
-        source_letter = get_column_letter(source_col)
-        source_width = ws.column_dimensions[source_letter].width
-
-        for column in range(insert_at, insert_at + 3):
-            column_letter = get_column_letter(column)
-            ws.column_dimensions[column_letter].width = source_width or 14
+        for column in range(append_at, append_at + 3):
             for row in range(1, ws.max_row + 1):
                 ws.cell(row, column)._style = copy(ws.cell(row, source_col)._style)
                 ws.cell(row, column).alignment = copy(ws.cell(row, source_col).alignment)
 
         for offset, header in enumerate(("Latitud", "Longitud", "Precisión")):
-            ws.cell(header_row, insert_at + offset).value = header
+            ws.cell(header_row, append_at + offset).value = header
 
     if explorer:
         headers = [ws.cell(header_row, c).value for c in range(1, ws.max_column + 1)]
@@ -786,6 +812,18 @@ def _prepare_classico_worksheet(ws, *, explorer: bool) -> None:
         str(ws.cell(header_row, c).value).strip()
         for c in range(1, ws.max_column + 1)
     ]
+
+    geo_widths = {
+        "latitud": 16,
+        "longitud": 16,
+        "precision": 18,
+    }
+    for column, header in enumerate(final_headers, start=1):
+        key = _norm_colkey(header)
+        width = geo_widths.get(key, original_widths.get(key))
+        if width is not None:
+            ws.column_dimensions[get_column_letter(column)].width = width
+
     _apply_classification_row(ws, header_row, ws.max_column, final_headers)
 
 def _apply_width_overrides(ws, df_export: pd.DataFrame):
@@ -1126,6 +1164,32 @@ def _apply_branding_row(
         )
 
         ws.add_image(img)
+
+    # Centrar cualquier logo dentro de A1. Para imágenes embebidas el tamaño
+    # visible vive en ``anchor.ext`` y puede ser distinto de las dimensiones
+    # intrínsecas del archivo. La plantilla usa Poppins, cuya unidad de ancho
+    # de columna se renderiza aproximadamente a 8 px en Excel/Numbers.
+    row_height_px = points_to_pixels(ws.row_dimensions[1].height)
+    column_a_width_px = (ws.column_dimensions["A"].width or 13) * 8
+    emu_per_pixel = pixels_to_EMU(1)
+    for image in ws._images:
+        anchor = image.anchor
+        marker = getattr(anchor, "_from", None)
+        extent = getattr(anchor, "ext", None)
+        if marker is None or marker.row != 0:
+            continue
+
+        if extent is not None and getattr(extent, "cy", None) is not None:
+            image_height_px = extent.cy / emu_per_pixel
+            image_width_px = extent.cx / emu_per_pixel
+        else:
+            image_height_px = image.height
+            image_width_px = image.width
+
+        vertical_offset_px = max(0, (row_height_px - image_height_px) / 2)
+        horizontal_offset_px = max(0, (column_a_width_px - image_width_px) / 2)
+        marker.rowOff = pixels_to_EMU(vertical_offset_px)
+        marker.colOff = pixels_to_EMU(horizontal_offset_px)
 
     ws.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
 
@@ -1543,6 +1607,7 @@ def ETL_BIMSA(
     base_ws = wb.active
 
     if es_clasico:
+        template_images = _capture_worksheet_images(base_ws)
         source_frames = _classico_source_frames(df_export)
         worksheets = [base_ws]
         for _ in source_frames[1:]:
@@ -1551,7 +1616,8 @@ def ETL_BIMSA(
         sheet_jobs = []
         for ws, (sheet_name, source_df, is_explorer) in zip(worksheets, source_frames):
             ws.title = sheet_name
-            ws._images = []
+            if not (logo_path and os.path.exists(logo_path)):
+                _restore_worksheet_images(ws, template_images)
             _prepare_classico_worksheet(ws, explorer=is_explorer)
             sheet_jobs.append((ws, source_df, 3, 4))
     else:
@@ -1620,6 +1686,13 @@ def ETL_BIMSA(
             orig_headers=template_headers if es_clasico else None,
         )
 
+        effective_logo_path = logo_path
+        if es_clasico:
+            if ws._images:
+                effective_logo_path = None
+            elif not (logo_path and os.path.exists(logo_path)):
+                effective_logo_path = _resolve_resource_path("logo_bimsa.jpg")
+
         _apply_branding_row(
             ws,
             ncols=ncols,
@@ -1631,12 +1704,13 @@ def ETL_BIMSA(
             fecha_inicio=fecha_inicio,
             fecha_fin=fecha_fin,
             logo_filename="logo_bimsa.jpg",
-            logo_path=(logo_path or _resolve_resource_path("logo_bimsa.jpg")) if es_clasico else logo_path,
+            logo_path=effective_logo_path,
         )
 
         _format_date_columns_no_time(ws, working_df, first_data_row)
         _format_numeric_columns(ws, working_df, first_data_row)
-        _apply_width_overrides(ws, working_df)
+        if not es_clasico:
+            _apply_width_overrides(ws, working_df)
 
         # FIX FINAL EXTRA (override total para años)
         for col_idx, col_name in enumerate(working_df.columns, start=1):
